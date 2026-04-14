@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SECURE SCAN</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+</head>
+<body class="bg-white text-black p-10">
+
+    <header class="border-b-4 border-black pb-4 mb-8">
+        <h1 class="text-4xl font-black tracking-tight">SECURE SCAN</h1>
+        <p class="text-gray-600 font-medium">Detecting Malicious QR Codes</p>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+        
+        <section>
+            <h2 class="font-bold uppercase text-xl tracking-widest pb-1 mb-4">Webcam Input</h2>
+            
+            <div id="webcam-container" class="aspect-video bg-gray-100 border-2 border-black flex items-center justify-center overflow-hidden relative">
+                <div id="status-searching" class="text-center z-10">
+                    <div class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p class="mono text-sm text-blue-800 font-bold uppercase tracking-widest">Searching for QR...</p>
+                </div>
+
+                <div id="status-captured" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-white">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://umass-portal.security-verify.com/login" 
+                         alt="Captured QR" class="border-4 border-red-500 p-2 shadow-xl">
+                    <div class="absolute top-2 left-2 bg-red-600 text-white text-[10px] px-2 font-bold uppercase">Frame Captured</div>
+                </div>
+            </div>
+            
+            <div class="mt-6 p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                <p id="status-text" class="mono text-2xl font-bold text-blue-800 leading-tight uppercase">
+                    STATUS: INITIALIZING...
+                </p>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="font-bold uppercase text-xl tracking-widest pb-1 mb-4">Detection Results</h2>
+            
+            <div class="mb-8 border-2 border-black p-8 text-center bg-gray-50">
+                <p class="text-xs uppercase font-black text-gray-400 tracking-widest">Malicious Probability Score</p>
+                <div id="score-container">
+                    <p id="probability-text" class="text-7xl font-black mt-2 text-gray-300">-</p>
+                    <p id="risk-label" class="font-bold uppercase tracking-widest mt-1 italic text-lg text-gray-400">Awaiting Scan...</p>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <h3 class="font-bold border-b-2 border-black pb-1 uppercase text-xl tracking-widest">Explanatory Feedback</h3>
+                    
+                <div class="p-3 border-l-4 border-black bg-gray-50">
+                    <p class="text-sm font-black uppercase flex items-center">
+                        <span class="mr-2">🔗</span> Website Link Security
+                    </p>
+                    <p class="text-sm text-gray-700 mt-1">
+                        The link inside this QR code looks suspicious. It is trying to hide its true destination and uses an uncommon format often found in phishing scams.
+                    </p>
+                </div>
+
+                <div class="p-3 border-l-4 border-black bg-gray-50">
+                    <p class="text-sm font-black uppercase flex items-center">
+                        <span class="mr-2">⚠️</span> Physical Tampering Check
+                    </p>
+                    <p class="text-sm text-gray-700 mt-1">
+                        Our scanner detected a potential "sticker attack." This QR code appears to be layered over another one, a common tactic used to hijack public signs.
+                    </p>
+                </div>
+
+                <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded text-xs font-bold text-red-800 uppercase text-center">
+                    Recommendation: Do not enter personal data or passwords on this site.
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer class="mt-16 pt-8 border-t-2 border-black">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div>
+                <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Project Group 6</h3>
+                <ul class="grid grid-cols-2 gap-y-2 text-sm font-bold mono uppercase">
+                    <li>Isabel Wabno</li>
+                    <li>Szymon Wabno</li>
+                    <li>Neha Janardhan</li>
+                    <li>Parinitha Venkata Reddy</li>
+                    <li>AJ El Hout</li>
+                </ul>
+            </div>
+            <div class="flex flex-col justify-end space-y-1 text-right">
+                <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-3">System Architecture</h3>
+                <p class="mono text-[11px] font-bold uppercase"><span class="text-gray-400">Classifier:</span> XGBoost</p>
+                <p class="mono text-[11px] font-bold uppercase"><span class="text-gray-400">Computer Vision:</span> VGG19 Neural Embedding</p>
+                <p class="mono text-[11px] font-bold uppercase"><span class="text-gray-400">Feature Set:</span> 24+ Lexical Parameters</p>
+                <p class="mono text-[11px] font-bold uppercase"><span class="text-gray-400">Target:</span> 85-90% Accuracy</p>
+            </div>
+        </div>
+        <div class="mt-8 text-center text-[10px] mono text-gray-300 uppercase tracking-[0.2em]">
+            UMass Amherst | ECE 547 Security Engineering | Spring 2026
+        </div>
+    </footer>
+
+    <script>
+        function updateRiskUI(score) {
+            const textEl = document.getElementById('probability-text');
+            const labelEl = document.getElementById('risk-label');
+            
+            textEl.innerText = score + "%";
+            textEl.classList.remove('text-gray-300', 'text-red-600', 'text-orange-500', 'text-green-600');
+            labelEl.classList.remove('text-gray-400', 'text-red-600', 'text-orange-500', 'text-green-600');
+
+            if (score >= 70) {
+                textEl.classList.add('text-red-600');
+                labelEl.classList.add('text-red-600');
+                labelEl.innerText = "High Risk Detected";
+            } else if (score >= 40) {
+                textEl.classList.add('text-orange-500');
+                labelEl.classList.add('text-orange-500');
+                labelEl.innerText = "Caution: Review Indicators";
+            } else {
+                textEl.classList.add('text-green-600');
+                labelEl.classList.add('text-green-600');
+                labelEl.innerText = "Likely Safe";
+            }
+        }
+
+        function runScanSimulation(score) {
+            const statusText = document.getElementById('status-text');
+            const searchingUI = document.getElementById('status-searching');
+            const capturedUI = document.getElementById('status-captured');
+
+            // Phase 1: Scanning
+            statusText.innerText = "STATUS: SCANNING...";
+
+            // Phase 2: Analyzing (Maintains text-2xl)
+            setTimeout(() => {
+                searchingUI.classList.add('hidden');
+                capturedUI.classList.remove('hidden');
+                statusText.innerText = "STATUS: ANALYZING...";
+                statusText.className = "mono text-2xl font-bold text-orange-600 leading-tight uppercase";
+            }, 2000);
+
+            // Phase 3: Complete (Maintains text-2xl)
+            setTimeout(() => {
+                statusText.innerText = "STATUS: COMPLETE";
+                statusText.className = "mono text-2xl font-bold text-red-700 leading-tight uppercase";
+                updateRiskUI(score); 
+            }, 4000);
+        }
+
+        window.onload = () => runScanSimulation(42);
+    </script>
+</body>
+</html>
