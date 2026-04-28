@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SECURE SCAN</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-white text-black p-6 md:p-10">
+  <header class="border-b-4 border-black pb-4 mb-8">
+    <h1 class="text-4xl font-black tracking-tight">SECURE SCAN</h1>
+    <p class="text-gray-600 font-medium">Real-Time Malicious QR Code Detection Interface</p>
+  </header>
+
+  <main class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+    <section>
+      <h2 class="font-bold uppercase text-xl tracking-widest pb-1 mb-4">QR Input</h2>
+
+      <div id="webcam-container" class="aspect-video bg-gray-100 border-2 border-black flex items-center justify-center overflow-hidden relative">
+        <img
+          id="camera-feed"
+          src="/video_feed"
+          alt="Live webcam feed"
+          class="w-full h-full object-contain bg-black"
+        />
+
+        <div id="frame-label" class="absolute top-2 left-2 bg-blue-700 text-white text-[10px] px-2 font-bold uppercase">
+          Live Camera
+        </div>
+      </div>
+
+      <div class="mt-6 p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
+        <p id="status-text" class="text-2xl font-bold text-blue-800 leading-tight uppercase">
+          STATUS: CAMERA ACTIVE
+        </p>
+      </div>
+
+      <div class="mt-6">
+        <label class="block text-sm font-black uppercase tracking-widest mb-2">
+          Decoded URL / Manual Input
+        </label>
+        <input
+          id="url-input"
+          type="text"
+          placeholder="Scan a QR or type a URL here..."
+          class="w-full border-2 border-black px-4 py-3 text-sm focus:outline-none"
+        />
+      </div>
+
+      <div class="mt-6 space-y-3">
+        <button id="scan-btn" class="w-full bg-red-700 text-white py-4 font-black uppercase tracking-widest hover:bg-red-800">
+          Analyze QR
+        </button>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="font-bold uppercase text-xl tracking-widest pb-1 mb-4">Detection Results</h2>
+
+      <div class="mb-8 border-2 border-black p-8 text-center bg-gray-50">
+        <p class="text-xs uppercase font-black text-gray-400 tracking-widest">
+          Malicious Probability Score
+        </p>
+        <p id="probability-text" class="text-7xl font-black mt-2 text-gray-300">-</p>
+        <p id="risk-label" class="font-bold uppercase tracking-widest mt-1 italic text-lg text-gray-400">
+          Awaiting Scan...
+        </p>
+      </div>
+
+      <div class="space-y-6">
+        <h3 class="font-bold border-b-2 border-black pb-1 uppercase text-xl tracking-widest">
+          Explanatory Feedback
+        </h3>
+
+        <div id="feedback-list" class="space-y-3">
+          <p class="text-sm text-gray-500">
+            Hold a QR code in the camera frame, then click Analyze QR.
+          </p>
+        </div>
+
+        <div id="recommendation" class="hidden mt-4 p-3 rounded text-xs font-bold uppercase text-center"></div>
+
+        <div>
+          <h3 class="font-bold border-b-2 border-black pb-1 uppercase text-xl tracking-widest mt-8 mb-3">
+            Extracted Features
+          </h3>
+          <div id="feature-table" class="text-sm border-2 border-black divide-y divide-black"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="mt-16 pt-8 border-t-2 border-black">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+      <div>
+        <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">
+          Project Group 6
+        </h3>
+        <ul class="grid grid-cols-2 gap-y-2 text-sm font-bold uppercase">
+          <li>Isabel Wabno</li>
+          <li>Szymon Wabno</li>
+          <li>Neha Janardhan</li>
+          <li>Parinitha Venkata Reddy</li>
+          <li>AJ El Hout</li>
+        </ul>
+      </div>
+
+      <div class="flex flex-col justify-end space-y-1 text-right">
+        <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-3">
+          System Architecture
+        </h3>
+        <p class="text-[11px] font-bold uppercase">
+          <span class="text-gray-400">Camera:</span> OpenCV + pyzbar
+        </p>
+        <p class="text-[11px] font-bold uppercase">
+          <span class="text-gray-400">Classifier:</span> Temporary keyword logic
+        </p>
+        <p class="text-[11px] font-bold uppercase">
+          <span class="text-gray-400">Future Model:</span> XGBoost
+        </p>
+        <p class="text-[11px] font-bold uppercase">
+          <span class="text-gray-400">Future Vision:</span> VGG19 neural embedding
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-8 text-center text-[10px] text-gray-300 uppercase tracking-[0.2em]">
+      UMass Amherst | ECE 547 Security Engineering | Spring 2026
+    </div>
+  </footer>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    function riskMeta(score) {
+      if (score >= 70) {
+        return {
+          label: "High Risk Detected",
+          color: "red",
+          recommendation: "Recommendation: do not enter personal data or passwords on this site."
+        };
+      }
+
+      if (score >= 40) {
+        return {
+          label: "Caution: Review Indicators",
+          color: "orange",
+          recommendation: "Recommendation: verify the destination manually before continuing."
+        };
+      }
+
+      return {
+        label: "Likely Safe",
+        color: "green",
+        recommendation: "Recommendation: no major warning signs detected, but still verify the destination."
+      };
+    }
+
+    function setStatus(text, colorClass) {
+      const el = $("status-text");
+      el.innerText = text;
+      el.className = `text-2xl font-bold ${colorClass} leading-tight uppercase`;
+    }
+
+    function normalizeResult(result) {
+      return {
+        score: result.score ?? 0,
+        decodedUrl: result.decodedUrl ?? "",
+        indicators: Array.isArray(result.indicators) ? result.indicators : []
+      };
+    }
+
+    function renderResult(result) {
+      const { score, decodedUrl, indicators } = normalizeResult(result);
+      const meta = riskMeta(score);
+
+      $("probability-text").innerText = `${score}%`;
+      $("probability-text").className = `text-7xl font-black mt-2 text-${meta.color}-600`;
+
+      $("risk-label").innerText = result.label || meta.label;
+      $("risk-label").className = `font-bold uppercase tracking-widest mt-1 italic text-lg text-${meta.color}-600`;
+
+      $("url-input").value = decodedUrl;
+      const feedbackItems = indicators.length
+        ? indicators
+        : [
+            {
+              key: "QR Decode",
+              value: "No Data",
+              risk: 0,
+              explanation: "No backend feature data was returned."
+            }
+          ];
+
+      $("feedback-list").innerHTML = feedbackItems.map(item => `
+        <div class="p-3 border-l-4 border-black bg-gray-50">
+          <p class="text-sm font-black uppercase">${item.key}: ${item.value}</p>
+          <p class="text-sm text-gray-700 mt-1">${item.explanation}</p>
+        </div>
+      `).join("");
+
+      $("feature-table").innerHTML = feedbackItems.map(item => `
+        <div class="grid grid-cols-3 gap-2 p-3">
+          <div class="font-black uppercase">${item.key}</div>
+          <div class="break-all">${item.value}</div>
+          <div class="font-bold ${item.risk > 0 ? "text-red-700" : "text-green-700"}">
+            ${item.risk > 0 ? `+${item.risk}` : "0"} risk
+          </div>
+        </div>
+      `).join("");
+
+      const rec = $("recommendation");
+      rec.className = `mt-4 p-3 rounded text-xs font-bold uppercase text-center bg-${meta.color}-50 border border-${meta.color}-200 text-${meta.color}-800`;
+      rec.innerText = meta.recommendation;
+      rec.classList.remove("hidden");
+    }
+
+    async function runInteractiveScan() {
+      setStatus("STATUS: READING BACKEND RESULT...", "text-blue-800");
+
+      try {
+        const manualUrl = $("url-input").value;
+
+        let result;
+
+        if (manualUrl && manualUrl.trim() !== "") {
+          // simple lightweight analysis for manual input
+          const suspicious = /(login|verify|bank|secure|account)/i.test(manualUrl);
+
+          result = {
+            decodedUrl: manualUrl,
+            score: suspicious ? 80 : 0,
+            label: suspicious ? "High Risk Detected" : "Likely Safe",
+            indicators: [
+              {
+                key: "Manual Entry",
+                value: "User Provided URL",
+                risk: 0,
+                explanation: "This URL was manually entered instead of scanned from a QR code."
+              },
+              {
+                key: "Keyword Check",
+                value: suspicious ? "Suspicious" : "Clean",
+                risk: suspicious ? 80 : 0,
+                explanation: suspicious
+                  ? "URL contains phishing-related keywords."
+                  : "No suspicious keywords detected."
+              }
+            ]
+          };
+        } else {
+          const response = await fetch("/scan");
+
+          if (!response.ok) {
+            throw new Error("Backend scan failed");
+          }
+
+          result = await response.json();
+        }
+
+        renderResult(result);
+
+        const score = result.score ?? 0;
+
+        if (score >= 70) {
+          setStatus("STATUS: COMPLETE", "text-red-700");
+        } else if (score >= 40) {
+          setStatus("STATUS: COMPLETE", "text-orange-600");
+        } else {
+          setStatus("STATUS: COMPLETE", "text-green-700");
+        }
+
+      } catch (error) {
+        setStatus("STATUS: BACKEND ERROR", "text-red-700");
+      }
+    }
+
+    $("scan-btn").addEventListener("click", runInteractiveScan);
+
+    window.addEventListener("load", () => {
+      setStatus("STATUS: CAMERA ACTIVE", "text-blue-800");
+    });
+  </script>
+</body>
+</html>
