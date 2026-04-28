@@ -1,8 +1,15 @@
 import cv2
 from pyzbar.pyzbar import decode
 
+# new code for visual feature extraction
+import numpy as np
+from visual_extraction import extract_features
+training_data = []
+# end of new code
+
 # Open camera
-camera = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)
+# camera = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)
+camera = cv2.VideoCapture(0) # added for camera to work on my (Szymon's) Windows laptop
 
 # Store already seen QR codes
 seen_qr = set()
@@ -32,6 +39,12 @@ while True:
         if data not in seen_qr:
             seen_qr.add(data)
 
+# ----- start of visual feature extraction -----
+            cropped_qr = frame[y:y+h, x:x+w]
+            visual_features = extract_features(cropped_qr)
+            training_data.append({"url": data, "vgg19_features": visual_features})
+# ----- end of visual feature extraction -----
+
             if data.startswith("http"):
                 if is_suspicious(data):
                     print("POSSIBLE PHISHING:", data)
@@ -60,6 +73,11 @@ while True:
 
     # Press 'q' to quit
     if cv2.waitKey(1) & 0xFF == ord('q'):
+
+        # added to save the training data to a file when quitting
+        if len(training_data) > 0:
+            np.save("qr_training_dataset.npy", training_data)
+    
         break
 
 camera.release()
